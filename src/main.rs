@@ -4,10 +4,15 @@ use std::io::BufReader;
 use yew::prelude::*;
 use yewdux::prelude::*;
 
-#[derive(Clone, PartialEq, Eq, Store, Properties, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Eq, Store, Serialize, Deserialize)]
 #[store(storage = "session")]
 struct State {
     program_input: String,
+}
+
+#[derive(Properties, PartialEq)]
+struct Result_ {
+    value: Vec<String>,
 }
 
 impl Default for State {
@@ -23,12 +28,7 @@ fn App() -> Html {
     html! {
         <>
             <Input/>
-
             <Output/>
-
-            {token_stream()}
-
-            {syntax_tree()}
         </>
     }
 }
@@ -77,7 +77,11 @@ fn Output() -> Html {
     html! {
         <div  style="border:1px solid black; width=100px; height=100px">
             if is_ok {
-               <p> { res.ok().expect("value is ok") }</p>
+               <p> { res.clone().ok().expect("value is ok").0 }</p>
+
+               <TokenStream value={ res.clone().ok().expect("value is ok").1}/>
+
+               <SyntaxTree value={ res.ok().expect("value is ok").2} />
             } else {
               <p>  { res.err().expect("value is error") } </p>
             }
@@ -85,41 +89,47 @@ fn Output() -> Html {
     }
 }
 
-fn token_stream() -> Html {
+#[function_component]
+fn TokenStream(prop: &Result_) -> Html {
     // Speak wasm-interpreter provides token stream
     // Render token stream
     html! {
         <div  style="border:1px solid black; width=100px; height=100px">
-            {"This is the token stream"}
+            <p> { prop.value.clone() } </p>
         </div>
     }
 }
 
-fn syntax_tree() -> Html {
+#[function_component]
+fn SyntaxTree(prop: &Result_) -> Html {
     // Speak wasm-interpreter provides syntax tree
     // Render syntax tree
     html! {
         <div  style="border:1px solid black; width=100px; height=100px">
-            {"This is the syntax tree"}
+           <p> {prop.value.clone()}</p>
         </div>
     }
 }
 
-fn speak_interpreter(input: &str) -> Result<String, String> {
+fn speak_interpreter(input: &str) -> Result<(String, Vec<String>, Vec<String>), String> {
     let mut ctx = SpeakCtx::new(&false);
     match ctx.exec(BufReader::new(input.as_bytes())) {
-        Ok(val) => Ok(val.string()),
+        Ok((val, tok_stream, syntax_tree)) => {
+            let tok_stream = tok_stream
+                .iter()
+                .map(|val| val.string())
+                .collect::<Vec<String>>();
+            let syntax_tree = syntax_tree
+                .iter()
+                .map(|val| val.string())
+                .collect::<Vec<String>>();
+
+            Ok((val.string(), tok_stream, syntax_tree))
+        }
         Err(err) => Err(err.message),
     }
 }
 
 fn main() {
-    // let res = speak_interpreter("print \"Hello, World!\"");
-
-    // match res {
-    //     Ok(val) => println!("Result is ok: {}", val),
-    //     Err(err) => println!("Result is err: {}", err),
-    // }
-
     yew::Renderer::<App>::new().render();
 }
