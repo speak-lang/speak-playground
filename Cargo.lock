@@ -80,7 +80,7 @@ dependencies = [
 [[package]]
 name = "core"
 version = "0.1.0"
-source = "git+https://github.com/muse254/speak?branch=www#ecf09457b83200ef52a982eb7dbcee0631a6e599"
+source = "git+https://github.com/muse254/speak?branch=main#1d7e416c897c01d586b587ec3b45af6292a70a8c"
 dependencies = [
  "lazy_static",
  "regex",
