@@ -1,13 +1,18 @@
-use core::runtime::Context as SpeakCtx;
+use core::{parser::Node, runtime::Context as SpeakCtx};
 use serde::{Deserialize, Serialize};
 use std::io::BufReader;
 use yew::prelude::*;
 use yewdux::prelude::*;
 
-#[derive(Clone, PartialEq, Eq, Store, Properties, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Eq, Store, Serialize, Deserialize)]
 #[store(storage = "session")]
 struct State {
     program_input: String,
+}
+
+#[derive(Properties, PartialEq)]
+struct Result_ {
+    value: Vec<String>,
 }
 
 impl Default for State {
@@ -23,12 +28,7 @@ fn App() -> Html {
     html! {
         <>
             <Input/>
-
             <Output/>
-
-            {token_stream()}
-
-            {syntax_tree()}
         </>
     }
 }
@@ -51,7 +51,7 @@ fn Input() -> Html {
 
     html! {
         <>
-            { "Program input:" }
+            <h3>{ "Program Input" }</h3>
             <textarea ref={input_node_ref}
              value={(*state).clone().program_input}
              rows="5"
@@ -70,56 +70,98 @@ fn Output() -> Html {
 
     // run against interpreter
     let res = speak_interpreter(&(*state).clone().program_input);
-    let is_ok = res.is_ok();
 
     // Speak wasm-interpreter provides output if any
-    // Render output
-    html! {
-        <div  style="border:1px solid black; width=100px; height=100px">
-            if is_ok {
-               <p> { res.ok().expect("value is ok") }</p>
-            } else {
-              <p>  { res.err().expect("value is error") } </p>
+    match res {
+        Ok((program_output, token_stream, syntax_tree)) => {
+            html! {
+                <>
+                    <div style="border:1px solid black; width=100px; height=100px">
+                        <h3>{ "Output" }</h3>
+                        { program_output }
+                    </div>
+
+                    <TokenStream value={ token_stream}/>
+
+                    { syntax_tree }
+                </>
             }
-        </div>
+        }
+        Err(err) => {
+            html! {
+                <p>  { err } </p>
+            }
+        }
     }
 }
 
-fn token_stream() -> Html {
+#[function_component]
+fn TokenStream(prop: &Result_) -> Html {
     // Speak wasm-interpreter provides token stream
     // Render token stream
     html! {
         <div  style="border:1px solid black; width=100px; height=100px">
-            {"This is the token stream"}
+        <h3>{ "Token Stream" }</h3>
+        {
+            prop.value.clone().into_iter().enumerate().map(|(i, entry)| {
+                html!{< key={entry}><p> { format!("{}. {}", i+1, entry.clone()) } </p></>}
+            }).collect::<Html>()
+        }
         </div>
     }
 }
 
-fn syntax_tree() -> Html {
-    // Speak wasm-interpreter provides syntax tree
-    // Render syntax tree
-    html! {
-        <div  style="border:1px solid black; width=100px; height=100px">
-            {"This is the syntax tree"}
-        </div>
-    }
-}
-
-fn speak_interpreter(input: &str) -> Result<String, String> {
+fn speak_interpreter(input: &str) -> Result<(String, Vec<String>, Html), String> {
     let mut ctx = SpeakCtx::new(&false);
     match ctx.exec(BufReader::new(input.as_bytes())) {
-        Ok(val) => Ok(val.string()),
+        Ok((val, tok_stream, syntax_tree)) => {
+            let tok_stream = tok_stream
+                .iter()
+                .map(|val| val.string())
+                .collect::<Vec<String>>();
+
+            Ok((val.string(), tok_stream, compose_tree(syntax_tree)))
+        }
         Err(err) => Err(err.message),
     }
 }
 
+fn compose_tree(nodes: Vec<Node>) -> Html {
+    html! {
+        <>
+            <h3>{ "Syntax Tree" }</h3>
+            <ul class="tree">
+                {nest_tree(&nodes)}
+            </ul>
+        </>
+    }
+}
+
+fn nest_tree(nodes: &Vec<Node>) -> Html {
+    nodes
+        .into_iter()
+        .enumerate()
+        .map(|(i, node)| match node {
+            Node::FunctionLiteral { body, .. } => {
+                let id = format!("c{}", i + 1);
+                html! {
+                    <li>
+                        <input type="checkbox" checked=true id={ id.clone() } />
+                        <label for={id} class="tree_label">{ node.string() }</label>
+                        <ul> { nest_tree(body)} </ul>
+                    </li>
+                }
+            }
+
+            _ => {
+                html! {
+                 <li><span class="tree_label">{ node.string() }</span></li>
+                }
+            }
+        })
+        .collect::<Html>()
+}
+
 fn main() {
-    // let res = speak_interpreter("print \"Hello, World!\"");
-
-    // match res {
-    //     Ok(val) => println!("Result is ok: {}", val),
-    //     Err(err) => println!("Result is err: {}", err),
-    // }
-
     yew::Renderer::<App>::new().render();
 }
