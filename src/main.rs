@@ -6,7 +6,7 @@ use yewdux::prelude::*;
 
 #[derive(Clone, PartialEq, Eq, Store, Serialize, Deserialize)]
 #[store(storage = "session")]
-struct State {
+struct Input_ {
     program_input: String,
 }
 
@@ -15,7 +15,7 @@ struct Result_ {
     value: Vec<String>,
 }
 
-impl Default for State {
+impl Default for Input_ {
     fn default() -> Self {
         Self {
             program_input: "\"Hello, World!\"".to_string(),
@@ -26,17 +26,17 @@ impl Default for State {
 #[function_component]
 fn App() -> Html {
     html! {
-        <>
+        <div class={classes!("input-output")}>
             <Input/>
             <Output/>
-        </>
+        </div>
     }
 }
 
 // input represents the playground user input.
 #[function_component]
 fn Input() -> Html {
-    let (state, dispatch) = use_store::<State>();
+    let (state, dispatch) = use_store::<Input_>();
     let input_node_ref = use_node_ref();
 
     let onclick = {
@@ -50,15 +50,13 @@ fn Input() -> Html {
     };
 
     html! {
-        <>
+        <div class={classes!("input")}>
             <h3>{ "Program Input" }</h3>
-            <textarea ref={input_node_ref}
-             value={(*state).clone().program_input}
-             rows="5"
-             cols="50"
-             ></textarea>
-            <button {onclick}>{"Run"}</button>
-        </>
+            <div class={classes!("input-container")}>
+                <textarea id="input-area" ref={input_node_ref} value={(*state).clone().program_input}></textarea>
+                <button id="run-button" {onclick}>{"Run"}</button>
+            </div>
+        </div>
     }
 }
 
@@ -66,7 +64,7 @@ fn Input() -> Html {
 #[function_component]
 fn Output() -> Html {
     // get program input
-    let (state, _) = use_store::<State>();
+    let (state, _) = use_store::<Input_>();
 
     // run against interpreter
     let res = speak_interpreter(&(*state).clone().program_input);
@@ -74,9 +72,10 @@ fn Output() -> Html {
     // Speak wasm-interpreter provides output if any
     match res {
         Ok((program_output, token_stream, syntax_tree)) => {
+            // style="border:1px solid black; width=100px; height=100px"
             html! {
-                <>
-                    <div style="border:1px solid black; width=100px; height=100px">
+                <div class={classes!("output")}>
+                    <div >
                         <h3>{ "Output" }</h3>
                         { program_output }
                     </div>
@@ -84,7 +83,7 @@ fn Output() -> Html {
                     <TokenStream value={ token_stream}/>
 
                     { syntax_tree }
-                </>
+                </div>
             }
         }
         Err(err) => {
