@@ -1,6 +1,7 @@
 use core::{parser::Node, runtime::Context as SpeakCtx};
 use serde::{Deserialize, Serialize};
 use std::io::BufReader;
+use web_sys;
 use yew::prelude::*;
 use yewdux::prelude::*;
 
@@ -8,6 +9,7 @@ use yewdux::prelude::*;
 #[store(storage = "session")]
 struct Input_ {
     program_input: String,
+    language: String,
 }
 
 #[derive(Properties, PartialEq)]
@@ -19,14 +21,35 @@ impl Default for Input_ {
     fn default() -> Self {
         Self {
             program_input: "\"Hello, World!\"".to_string(),
+            language: "en".to_string(),
         }
     }
 }
 
 #[function_component]
 fn App() -> Html {
+    let select_node_ref = use_node_ref();
+    let (_, dispatch) = use_store::<Input_>();
+
+    let onchange = {
+        let select_node_ref = select_node_ref.clone();
+        dispatch.reduce_mut_callback(move |state| {
+            state.language = select_node_ref
+                .clone()
+                .cast::<web_sys::HtmlSelectElement>()
+                .expect("This select node is valid")
+                .value()
+                .to_string();
+        })
+    };
+
     html! {
-        <div class={classes!("input-output")}>
+        <div>
+            <label for="languages">{"Choose an interpreter language variant:"}</label>
+            <select ref={select_node_ref} {onchange} name="languages">
+                <option value="en" selected=true>{"English"}</option>
+                <option value="sw">{"Swahili"}</option>
+            </select>
             <Input/>
             <Output/>
         </div>
@@ -50,11 +73,11 @@ fn Input() -> Html {
     };
 
     html! {
-        <div class={classes!("input")}>
+        <div>
             <h3>{ "Program Input" }</h3>
-            <div class={classes!("input-container")}>
-                <textarea id="input-area" ref={input_node_ref} value={(*state).clone().program_input}></textarea>
-                <button id="run-button" {onclick}>{"Run"}</button>
+            <div>
+                <textarea ref={input_node_ref} value={(*state).clone().program_input}></textarea>
+                <button {onclick}>{"Run"}</button>
             </div>
         </div>
     }
@@ -67,14 +90,13 @@ fn Output() -> Html {
     let (state, _) = use_store::<Input_>();
 
     // run against interpreter
-    let res = speak_interpreter(&(*state).clone().program_input);
+    let res = speak_interpreter(&state.language, &state.program_input);
 
     // Speak wasm-interpreter provides output if any
     match res {
         Ok((program_output, token_stream, syntax_tree)) => {
-            // style="border:1px solid black; width=100px; height=100px"
             html! {
-                <div class={classes!("output")}>
+                <div>
                     <div >
                         <h3>{ "Output" }</h3>
                         { program_output }
@@ -99,7 +121,7 @@ fn TokenStream(prop: &Result_) -> Html {
     // Speak wasm-interpreter provides token stream
     // Render token stream
     html! {
-        <div  style="border:1px solid black; width=100px; height=100px">
+        <div>
         <h3>{ "Token Stream" }</h3>
         {
             prop.value.clone().into_iter().enumerate().map(|(i, entry)| {
@@ -110,9 +132,9 @@ fn TokenStream(prop: &Result_) -> Html {
     }
 }
 
-fn speak_interpreter(input: &str) -> Result<(String, Vec<String>, Html), String> {
+fn speak_interpreter(lang: &str, input: &str) -> Result<(String, Vec<String>, Html), String> {
     let mut ctx = SpeakCtx::new(&false);
-    match ctx.exec(BufReader::new(input.as_bytes())) {
+    match ctx.exec(lang, BufReader::new(input.as_bytes())) {
         Ok((val, tok_stream, syntax_tree)) => {
             let tok_stream = tok_stream
                 .iter()
@@ -129,7 +151,7 @@ fn compose_tree(nodes: Vec<Node>) -> Html {
     html! {
         <>
             <h3>{ "Syntax Tree" }</h3>
-            <ul class="tree">
+            <ul>
                 {nest_tree(&nodes)}
             </ul>
         </>
@@ -142,11 +164,11 @@ fn nest_tree(nodes: &Vec<Node>) -> Html {
         .enumerate()
         .map(|(i, node)| match node {
             Node::FunctionLiteral { body, .. } => {
-                let id = format!("c{}", i + 1);
+                let id = format!("c{}", i + 1); // The first checkbox is c1
                 html! {
                     <li>
                         <input type="checkbox" checked=true id={ id.clone() } />
-                        <label for={id} class="tree_label">{ node.string() }</label>
+                        <label for={id}>{ node.string() }</label>
                         <ul> { nest_tree(body)} </ul>
                     </li>
                 }
@@ -154,7 +176,7 @@ fn nest_tree(nodes: &Vec<Node>) -> Html {
 
             _ => {
                 html! {
-                 <li><span class="tree_label">{ node.string() }</span></li>
+                 <li><span>{ node.string() }</span></li>
                 }
             }
         })
