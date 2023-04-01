@@ -17,7 +17,7 @@ lto = true
 
 [dependencies]
 serde = "1.0.152"
-web-sys = { version = "0.3.61", features = ["HtmlTextAreaElement"] }
+web-sys = { version = "0.3.61", features = ["HtmlTextAreaElement", "HtmlSelectElement"] }
 yew = { version = "0.20.0", features = ["csr"] }
 yewdux = "0.9.0"
-core = { git = "https://github.com/muse254/speak", branch = "main" }
+core = { git = "https://github.com/muse254/speak", branch = "v1" }
