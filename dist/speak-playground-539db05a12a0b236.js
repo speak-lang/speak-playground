@@ -632,7 +632,7 @@ function initSync(module) {
 
 async function init(input) {
     if (typeof input === 'undefined') {
-        input = new URL('speak-playground-9fdb7d0093825537_bg.wasm', import.meta.url);
+        input = new URL('speak-playground-539db05a12a0b236_bg.wasm', import.meta.url);
     }
     const imports = getImports();
 
