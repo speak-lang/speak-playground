@@ -1,3 +1,7 @@
+# Speak Playground
+
+The playground is hosted in Vercel. You can start interacting with this playground [here](https://deploy--leafy-piroshki-ccc0e1.netlify.app/).
+
 ## How to set up locally
 
 1. You need the rust toolchain installed, you can find the instructions [here](https://www.rust-lang.org/learn/get-started) 
