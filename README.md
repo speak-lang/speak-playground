@@ -2,7 +2,7 @@
 
 [![Netlify Status](https://api.netlify.com/api/v1/badges/bf492e9b-d053-494a-8f74-504ef00bde16/deploy-status)](https://app.netlify.com/sites/leafy-piroshki-ccc0e1/deploys)
 
-The playground is hosted in Vercel. You can start interacting with this playground [here](https://play.speaklang.org/).
+The playground is hosted in Netlify. You can start interacting with this playground [here](https://play.speaklang.org/).
 
 ## How to set up locally
 
