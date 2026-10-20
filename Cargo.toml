@@ -1,23 +1,16 @@
 [package]
 name = "speak-playground"
-version = "0.1.0"
-edition = "2021"
+version = "0.2.0"
+edition = "2024"
+rust-version = "1.98.1"
 
 [profile.release]
-# less code to include into binary
-panic = 'abort'
-# optimization over all codebase ( better optimization, slower build )
+panic = "abort"
 codegen-units = 1
-# optimization for size ( more aggressive )
-opt-level = 'z'
-# optimization for size
-# opt-level = 's'
-# link time optimization using using whole-program analysis
+opt-level = "z"
 lto = true
 
 [dependencies]
-serde = "1.0.152"
-web-sys = { version = "0.3.61", features = ["HtmlTextAreaElement", "HtmlSelectElement"] }
-yew = { version = "0.20.0", features = ["csr"] }
-yewdux = "0.9.0"
-core = { git = "https://github.com/muse254/speak", branch = "v1" }
+web-sys = { version = "0.3.106", features = ["HtmlTextAreaElement", "HtmlSelectElement"] }
+yew = { version = "0.23.0", features = ["csr"] }
+speak-core = { git = "https://github.com/speak-lang/speak", branch = "development" }

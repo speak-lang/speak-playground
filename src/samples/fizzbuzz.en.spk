@@ -1,0 +1,9 @@
+// speak fizzbuzz implementation
+fizzbuzz: n number -> string
+    if n % 15 = 0 ? "FizzBuzz"
+    if n % 3 = 0 ? "Fizz"
+    if n % 5 = 0 ? "Buzz"
+    sprint n
+
+// call with 45
+sprint "fizzbuzz result for {} is {}" 45 (fizzbuzz 45)

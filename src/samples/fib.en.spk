@@ -1,0 +1,15 @@
+// Fibonacci sequence generator
+//
+// naive implementation
+fib: n number -> number
+    if n = 0 ? 0
+    if n = 1 ? 1
+    (fib n - 1) + (fib n - 2)
+
+// memoized implementation
+memo is [0, 1]
+fibMemo: n number -> number
+    if memo[n] = () ? memo[n] is (fibMemo n - 1) + (fibMemo n - 2)
+    memo[n]
+
+sprint "Naive solution: {}, memoized solution: {}" (fib 20) (fibMemo 20)

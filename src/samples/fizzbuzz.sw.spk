@@ -1,0 +1,8 @@
+fizzbuzz: n nambari -> mlolongo
+    kama n % 15 = 0 ? "FizzBuzz"
+    kama n % 3 = 0 ? "Fizz"
+    kama n % 5 = 0 ? "Buzz"
+    mlolongo_andika n
+
+// ita na nambari 45
+mlolongo_andika "matokeo ya fizzbuzz kwa {} ni {} yenyewe" 45 (fizzbuzz 45)
