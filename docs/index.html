@@ -1,11 +1,23 @@
-<!DOCTYPE html><html lang="en"><head>
-    <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <title>Speak Playground</title>
+    <meta name="color-scheme" content="light dark">
+    <meta name="description" content="Try Speak, the programming language you can learn in your own language, in your browser.">
+    <title>Speak playground</title>
+    <link rel="stylesheet" href="/speak-playground/style-26a8c7690c6865da.css" integrity="sha384&#x2D;boBWeYkbZJkbOI37hOXIYDh&#x2F;6DfnOewaIHAuQCoqeYBYYoClsY&#x2F;FSs7wXKgqr8li"/>
+<link rel="modulepreload" href="/speak-playground/speak-playground-1c375d3f56f78a33.js" crossorigin="anonymous" integrity="sha384-wk3SeaHTxyKHkdK3+08Py76Wfi2LWw+AEyREdu2mqx+5P0acvBp/zGYkU0o0Jlz6"><link rel="preload" href="/speak-playground/speak-playground-1c375d3f56f78a33_bg.wasm" crossorigin="anonymous" integrity="sha384-D6gcSPHFBPv3yJscLJP8Xp/TunNthnLBCd5K/klnttAZrZc7lqgCH+kvsEc1fei9" as="fetch" type="application/wasm"></head>
+<body>
+<script type="module">
+import init, * as bindings from '/speak-playground/speak-playground-1c375d3f56f78a33.js';
+const wasm = await init({ module_or_path: '/speak-playground/speak-playground-1c375d3f56f78a33_bg.wasm' });
 
-<link rel="preload" href="/assets/speak-playground-539db05a12a0b236_bg.wasm" as="fetch" type="application/wasm" crossorigin="">
-<link rel="modulepreload" href="/assets/speak-playground-539db05a12a0b236.js"></head>
-<body class="bg-gray-100">
-<script type="module">import init from '/assets/speak-playground-539db05a12a0b236.js';init('/assets/speak-playground-539db05a12a0b236_bg.wasm');</script></body></html>
+
+window.wasmBindings = bindings;
+
+
+dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
+
+</script></body>
+</html>

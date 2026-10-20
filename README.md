@@ -1,17 +1,35 @@
 # Speak Playground
 
-[![Netlify Status](https://api.netlify.com/api/v1/badges/bf492e9b-d053-494a-8f74-504ef00bde16/deploy-status)](https://app.netlify.com/sites/leafy-piroshki-ccc0e1/deploys)
+Run [Speak](https://github.com/speak-lang/speak) programs in your browser, in English or Kiswahili. The interpreter ([`speak-core`](https://github.com/speak-lang/speak)) is compiled to WebAssembly and runs entirely on your device, so nothing is sent anywhere.
 
-The playground is hosted in Netlify. You can start interacting with this playground [here](https://play.speaklang.org/).
+Try it: <https://speak-lang.github.io/speak-playground/>
+Website: <https://speak-lang.github.io/>
 
-## How to set up locally
+The playground shows the value of the last line of your program. `print` writes to a console that browsers do not give WebAssembly, so use `sprint` (Kiswahili: `mlolongo_andika`) to produce the text you want to see.
 
-1. You need the rust toolchain installed, you can find the instructions [here](https://www.rust-lang.org/learn/get-started)
-2. You will need to install the Webassembly target and the trunk tool for building the application locally, instructions can be found [here](https://yew.rs/docs/getting-started/introduction)
-3. Building locally:
+## Run it locally
+
+The pinned toolchain (Rust 1.98.1 with the `wasm32-unknown-unknown` target) is installed automatically by `rust-toolchain.toml` if you use [rustup](https://rustup.rs/).
 
 ```sh
+cargo install --locked trunk
 trunk serve --port 8089
 ```
 
-The port flag can be changed to your liking, here I'm making an assumption that the port `8089` is free.
+Then open <http://localhost:8089/>. `cargo test` checks the bundled samples natively.
+
+## Rebuild the published site
+
+GitHub Pages serves the `docs/` folder of the `main` branch (there is no CI), so rebuilt output is committed:
+
+```sh
+rm -rf docs
+trunk build --release --public-url /speak-playground/ --dist docs
+touch docs/.nojekyll
+```
+
+Commit the new `docs/` together with your change.
+
+## Licence
+
+See [LICENSE.md](LICENSE.md).

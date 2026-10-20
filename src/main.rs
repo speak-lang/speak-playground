@@ -1,169 +1,138 @@
-use core::{parser::Node, runtime::Context as SpeakCtx};
-use serde::{Deserialize, Serialize};
+use speak_core::runtime::Context;
 use std::io::BufReader;
-use web_sys;
+use web_sys::{HtmlSelectElement, HtmlTextAreaElement};
 use yew::prelude::*;
-use yewdux::prelude::*;
 
-#[derive(Clone, PartialEq, Eq, Store, Serialize, Deserialize)]
-#[store(storage = "session")]
-struct ProgramInput {
-    input: String,
-    language: String,
+const LANGS: [(&str, &str); 2] = [("en", "English"), ("sw", "Kiswahili")];
+
+// (English name, Swahili name, English source, Swahili source)
+const SAMPLES: [(&str, &str, &str, &str); 3] = [
+    ("Hello world", "Habari dunia", include_str!("samples/hello.en.spk"), include_str!("samples/hello.sw.spk")),
+    ("FizzBuzz", "FizzBuzz", include_str!("samples/fizzbuzz.en.spk"), include_str!("samples/fizzbuzz.sw.spk")),
+    ("Fibonacci", "Fibonacci", include_str!("samples/fib.en.spk"), include_str!("samples/fib.sw.spk")),
+];
+
+fn sample(lang: &str, i: usize) -> &'static str {
+    if lang == "sw" { SAMPLES[i].3 } else { SAMPLES[i].2 }
 }
 
-#[derive(Properties, PartialEq)]
-struct ProgramOutput {
-    value: Vec<String>,
-}
-
-impl Default for ProgramInput {
-    fn default() -> Self {
-        Self {
-            input: String::from("\"Habari, Dunia!\""),
-            language: String::from("sw"),
-        }
+/// Runs a program and returns the value of its last expression, or the error text.
+fn run(lang: &str, code: &str) -> Result<String, String> {
+    // speak-core panics on empty input (parser::guard_unexpected_input_end), and the wasm build aborts on panic.
+    if code.trim().is_empty() {
+        return Ok(String::new());
+    }
+    let mut ctx = Context::new(&false);
+    match ctx.exec(lang, BufReader::new(code.as_bytes())) {
+        Ok((val, _, _)) => Ok(val.string()),
+        Err(e) => Err(e.string()),
     }
 }
 
 #[function_component]
 fn App() -> Html {
-    // get program input
-    let (state, dispatch) = use_store::<ProgramInput>();
+    let lang = use_state(|| "en".to_string());
+    let idx = use_state(|| 0usize);
+    let code = use_state(|| sample("en", 0).to_string());
+    let result = use_state(|| None::<Result<String, String>>);
 
-    // retrieve the language variant
-    let select_node_ref = use_node_ref();
-    let onchange = {
-        let select_node_ref = select_node_ref.clone();
-        dispatch.reduce_mut_callback(move |state| {
-            state.language = select_node_ref
-                .cast::<web_sys::HtmlSelectElement>()
-                .expect("This select node is valid")
-                .value();
+    // Changing language or sample reloads the matching sample.
+    let load = {
+        let (lang, idx, code, result) = (lang.clone(), idx.clone(), code.clone(), result.clone());
+        move |l: String, i: usize| {
+            code.set(sample(&l, i).to_string());
+            lang.set(l);
+            idx.set(i);
+            result.set(None);
+        }
+    };
+    let on_lang = {
+        let (load, idx) = (load.clone(), idx.clone());
+        Callback::from(move |e: Event| load(e.target_unchecked_into::<HtmlSelectElement>().value(), *idx))
+    };
+    let on_sample = {
+        let (load, lang) = (load, lang.clone());
+        Callback::from(move |e: Event| {
+            let i = e.target_unchecked_into::<HtmlSelectElement>().value().parse().unwrap_or(0);
+            load((*lang).clone(), i)
         })
     };
-
-    // retrieve the program input
-    let input_node_ref = use_node_ref();
-    let onclick = {
-        let input_node_ref_ = input_node_ref.clone();
-        dispatch.reduce_mut_callback(move |state| {
-            state.input = input_node_ref_
-                .cast::<web_sys::HtmlTextAreaElement>()
-                .expect("This textarea node is valid")
-                .value();
-        })
+    let on_input = {
+        let code = code.clone();
+        Callback::from(move |e: InputEvent| code.set(e.target_unchecked_into::<HtmlTextAreaElement>().value()))
+    };
+    let on_run = {
+        let (lang, code, result) = (lang.clone(), code.clone(), result.clone());
+        Callback::from(move |_| result.set(Some(run(&lang, &code))))
     };
 
-    // run against interpreter
-    let res = speak_interpreter(&state);
+    let sw = *lang == "sw";
+    let (title, l_lang, l_sample, l_code, l_run, l_out) = if sw {
+        ("Uwanja wa Speak", "Lugha", "Mfano", "Programu", "Endesha", "Matokeo")
+    } else {
+        ("Speak playground", "Language", "Example", "Program", "Run", "Output")
+    };
 
     html! {
-        <div class={classes!("max-w-2xl", "mx-auto", "p-6")}>
-            <h2 class={classes!("text-2xl", "font-bold", "mb-4")}>{ "Speak Interpreter" }</h2>
-            <div class={classes!("mb-6", "flex", "flex-col", "items-center")} >
-                <label for="languages" class={classes!("mb-2", "font-medium")}>{"Language Variant"}</label>
-                <select ref={select_node_ref} {onchange} name="languages" class={classes!("w-48", "h-10", "border-gray-300", "rounded-md", "shadow-sm")}>
-                    <option value="en" class={classes!("text-center")}>{"English"}</option>
-                    <option value="sw" class={classes!("text-center")} selected=true>{"Swahili"}</option>
-                </select>
+        <>
+        <header>
+            <h1>{ title }</h1>
+            <nav aria-label="Speak">
+                <a href="https://speak-lang.github.io/">{ "Website" }</a>
+                <a href="https://github.com/speak-lang/speak">{ "GitHub" }</a>
+            </nav>
+        </header>
+        <main>
+            <div class="controls">
+                <label>{ l_lang }
+                    <select onchange={on_lang}>
+                        { for LANGS.iter().map(|(v, n)| html!{ <option value={*v} selected={*v == *lang}>{ *n }</option> }) }
+                    </select>
+                </label>
+                <label>{ l_sample }
+                    <select onchange={on_sample}>
+                        { for SAMPLES.iter().enumerate().map(|(i, s)| html!{
+                            <option value={i.to_string()} selected={i == *idx}>{ if sw { s.1 } else { s.0 } }</option> }) }
+                    </select>
+                </label>
             </div>
-
-
-            // Program Input
-            <div class={classes!("mb-6")}>
-                <h3 class={classes!("font-medium", "mb-2")}>{ "Program Input" }</h3>
-                <div class={classes!("relative")}>
-                    <textarea ref={input_node_ref} value={(*state).clone().input}
-                    class={classes!("block", "w-full", "border-gray-300", "rounded-md", "shadow-sm", "pl-2", "pt-2", "pr-8", "pb-8")}
-                    rows=6></textarea>
-                    <button {onclick}
-                    class={classes!("absolute", "bottom-2", "right-2", "px-3", "py-1", "font-medium", "text-white", "bg-red-500", "rounded-md", "hover:bg-red-600")}
-                    >{"Run"}</button>
-                </div>
-            </div>
-
-            // Render output or error
-            <div class={classes!("mb-6")}>
-                if res.is_ok() {
-                    // Render output
-                    <div class={classes!("mb-4")}>
-                        <h3 class={classes!("font-medium", "mb-2")}>{ "Output" }</h3>
-                        <div class={classes!("bg-white", "rounded-md", "shadow-sm", "p-4")}>{ res.clone().expect("output exists as res is ok").0 }</div>
-                    </div>
-
-                    // Render token stream
-                    <div class={classes!("mb-4")}>
-                        <h3 class={classes!("font-medium", "mb-2")}>{ "Token Stream" }</h3>
-                        <div class={classes!("bg-white", "rounded-md", "shadow-sm", "p-4")}>
-                            {
-                                res.clone().expect("token_stream exists as res is ok").1.into_iter().enumerate().map(|(i, entry)| {
-                                html!{< key={entry}><p> { format!("{}. {}", i+1, entry.clone()) } </p></>}
-                                }).collect::<Html>()
-                            }
-                        </div>
-                    </div>
-
-                    { res.expect("syntax_tree exists as res is ok").2 }
-            } else {
-                // Render error
-                <p class={classes!("text-red-400")}> { res.unwrap_err() } </p>
-            }
-            </div>
-        </div>
+            <label class="block">{ l_code }
+                <textarea rows="14" spellcheck="false" autocapitalize="off" autocomplete="off"
+                    value={(*code).clone()} oninput={on_input} />
+            </label>
+            <button type="button" onclick={on_run}>{ l_run }</button>
+            <h2 id="out-h">{ l_out }</h2>
+            <pre role="status" aria-labelledby="out-h" class={ if matches!(*result, Some(Err(_))) { "error" } else { "" } }>
+                { match &*result { Some(Ok(s)) | Some(Err(s)) => s.clone(), None => String::new() } }
+            </pre>
+            <p class="note">{
+                if sw { "Uwanja huonyesha thamani ya mstari wa mwisho wa programu. Tumia mlolongo_andika, si andika." }
+                else { "The playground shows the value of the program's last line. Use sprint rather than print." }
+            }</p>
+        </main>
+        </>
     }
-}
-
-fn speak_interpreter(program_input: &ProgramInput) -> Result<(String, Vec<String>, Html), String> {
-    let mut ctx = SpeakCtx::new(&false);
-    match ctx.exec(
-        &program_input.language,
-        BufReader::new(program_input.input.as_bytes()),
-    ) {
-        Ok((val, tok_stream, syntax_tree)) => {
-            let tok_stream = tok_stream
-                .iter()
-                .map(|val| val.string())
-                .collect::<Vec<String>>();
-
-            Ok((
-                val.string(),
-                tok_stream,
-                html! {
-                    <div>
-                        <h3 class={classes!("font-medium", "mb-2")}>{ "Syntax Tree" }</h3>
-                        <ul class={classes!("border", "border-gray-300", "rounded-md", "p-4")}>
-                            {nest_tree(&syntax_tree)}
-                        </ul>
-                    </div>
-                },
-            ))
-        }
-        Err(err) => Err(err.message),
-    }
-}
-
-fn nest_tree(nodes: &Vec<Node>) -> Html {
-    nodes
-        .iter()
-        .map(|node| match node {
-            Node::FunctionLiteral { body, .. } => {
-                html! {
-                    <li class={classes!("mb-2")}>
-                        <label class={classes!("font-medium")}>{ node.string() }</label>
-                        <ul class={classes!("ml-4")}> { nest_tree(body)} </ul>
-                    </li>
-                }
-            }
-            _ => {
-                html! {
-                 <li><span class={classes!("font-medium")}>{ node.string() }</span></li>
-                }
-            }
-        })
-        .collect::<Html>()
 }
 
 fn main() {
     yew::Renderer::<App>::new().render();
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn samples_run() {
+        let want = [
+            ("Hello, World!", "Habari Dunia!"),
+            ("fizzbuzz result for 45 is FizzBuzz", "matokeo ya fizzbuzz kwa 45 ni FizzBuzz yenyewe"),
+            ("Naive solution: 6765, memoized solution: 6765", "Matokeo ya utekelezaji jinga: 6765, wa kumbukumbu: 6765"),
+        ];
+        for (i, (en, sw)) in want.iter().enumerate() {
+            assert_eq!(run("en", sample("en", i)).as_deref(), Ok(*en));
+            assert_eq!(run("sw", sample("sw", i)).as_deref(), Ok(*sw));
+        }
+        assert!(run("en", "sprint missing").is_err());
+    }
 }
